@@ -11,22 +11,13 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import difflib.DiffUtils;
 import difflib.Patch;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintStream;
+
+import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.KeyManagementException;
@@ -69,6 +60,12 @@ public class Builder
     private static boolean generateDocs;
     private static boolean dev;
 
+    public static String bukkitRepoUrl = "https://hub.spigotmc.org/stash/scm/spigot/bukkit.git";
+    public static String craftbukkitRepoUrl = "https://hub.spigotmc.org/stash/scm/spigot/craftbukkit.git";
+    public static String spigotRepoUrl = "https://hub.spigotmc.org/stash/scm/spigot/spigot.git";
+    public static String builddataRepoUrl = "https://hub.spigotmc.org/stash/scm/spigot/builddata.git";
+    public static String versionUrl = "https://hub.spigotmc.org/versions/";
+
     public static void main(String[] args) throws Exception
     {
         // May be null
@@ -88,6 +85,19 @@ public class Builder
             }
         }
         System.out.println( "Loading BuildTools version: " + buildVersion + " (#" + buildNumber + ")" );
+
+        if (new File("./settings.json").exists()) {
+            JsonObject config = new JsonObject();
+            JsonParser jparser = new JsonParser();
+            JsonElement element = jparser.parse(new FileReader("./settings.json"));
+            config = element.getAsJsonObject();
+
+            bukkitRepoUrl = config.get("bukkitRepo") != null ? config.get("bukkitRepo").getAsString() : bukkitRepoUrl;
+            craftbukkitRepoUrl = config.get("craftbukkitRepo") != null ? config.get("craftbukkitRepo").getAsString() : craftbukkitRepoUrl;
+            spigotRepoUrl = config.get("spigotRepo") != null ? config.get("spigotRepo").getAsString() : spigotRepoUrl;
+            builddataRepoUrl = config.get("builddataRepo") != null ? config.get("builddataRepo").getAsString() : builddataRepoUrl;
+            versionUrl = config.get("versionUrl") != null ? config.get("versionUrl").getAsString() : versionUrl;
+        }
 
         OptionParser parser = new OptionParser();
         OptionSpec<Void> disableCertFlag = parser.accepts( "disable-certificate-check" );
@@ -150,25 +160,25 @@ public class Builder
         File bukkit = new File( "Bukkit" );
         if ( !bukkit.exists() )
         {
-            clone( "https://hub.spigotmc.org/stash/scm/spigot/bukkit.git", bukkit );
+            clone( bukkitRepoUrl, bukkit );
         }
 
         File craftBukkit = new File( "CraftBukkit" );
         if ( !craftBukkit.exists() )
         {
-            clone( "https://hub.spigotmc.org/stash/scm/spigot/craftbukkit.git", craftBukkit );
+            clone( craftbukkitRepoUrl, craftBukkit );
         }
 
         File spigot = new File( "Spigot" );
         if ( !spigot.exists() )
         {
-            clone( "https://hub.spigotmc.org/stash/scm/spigot/spigot.git", spigot );
+            clone( spigotRepoUrl, spigot );
         }
 
         File buildData = new File( "BuildData" );
         if ( !buildData.exists() )
         {
-            clone( "https://hub.spigotmc.org/stash/scm/spigot/builddata.git", buildData );
+            clone( builddataRepoUrl, buildData );
         }
 
         File maven;
@@ -208,7 +218,7 @@ public class Builder
                 String verInfo;
                 try
                 {
-                    verInfo = get( "https://hub.spigotmc.org/versions/" + askedVersion + ".json" );
+                    verInfo = get( versionUrl + askedVersion + ".json" );
                 } catch ( IOException ex )
                 {
                     System.err.println( "Could not get version " + askedVersion + " does it exist? Try another version or use 'latest'" );
@@ -444,6 +454,7 @@ public class Builder
         URLConnection con = new URL( url ).openConnection();
         con.setConnectTimeout( 5000 );
         con.setReadTimeout( 5000 );
+        con.setRequestProperty("User-Agent", "BuildTools");
 
         InputStreamReader r = null;
         try
@@ -483,7 +494,6 @@ public class Builder
         System.out.println( "Pulling updates for " + repo.getRepository().getDirectory() );
 
         repo.reset().setRef( "origin/master" ).setMode( ResetCommand.ResetType.HARD ).call();
-        repo.fetch().call();
 
         System.out.println( "Successfully fetched updates!" );
 
@@ -597,8 +607,7 @@ public class Builder
     public static void clone(String url, File target) throws GitAPIException
     {
         System.out.println( "Starting clone of " + url + " to " + target );
-
-        Git result = Git.cloneRepository().setURI( url ).setDirectory( target ).call();
+        Git result = Git.cloneRepository().setURI(url).setDirectory( target ).call();
 
         try
         {
