@@ -21,6 +21,7 @@ Just use Maven 3. Simple and fast.
   * Make sure to create a correct versions system, just reply [SpigotMC's one](https://hub.spigotmc.org/versions/) and place your commits hashes - if you leave SpigotMC's one, you'll build standard Spigot sources!
 * Run your JAR
 * If you're lucky ( ¯\_(ツ)_/¯ ) you should get your nice custom Spigot JAR, as well as CraftBukkit one
+
 ## Disclaimer
 A big chunk of this tool is unchanged code from Spigot BuildTools repository, I own very few rights on it. This tool is released under the same license as the original tool.
 Also, please forgive any mistake in this text as I am not an English native speaker.
